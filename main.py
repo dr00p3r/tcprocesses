@@ -18,7 +18,7 @@ def manejar_cliente(conn, addr):
 
     while True:
         try:
-            data = conn.recv(1024).decode()
+            data = conn.recv(1024).decode(errors='ignore')
             if not data:
                 break
             respuesta = procesar_comando(data)
