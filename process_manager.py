@@ -6,30 +6,33 @@ import threading
 #Arreglo de procesos en memoria para simular un gestor de procesos.
 procesos = {}
 
+# ID del próximo proceso a crear.
+next_pid = 1
+
 # Lock para manejar concurrencia en el acceso a procesos
 # Esto es importante para evitar condiciones de carrera en un entorno multihilo.
 lock = threading.Lock()
 
-
 """    
     Crea un nuevo proceso.
-    id_: ID del proceso a crear.
     nombre: Nombre del proceso.
     prioridad: Prioridad del proceso.
     Retorna una tupla (exito, mensaje).
     Si el proceso ya existe, retorna False y un mensaje de Proceso ya existe.
     Si el proceso se crea correctamente, retorna True y un mensaje de Proceso creado.
 """
-def crear_proceso(id_, nombre, prioridad):
+def crear_proceso(nombre, prioridad):
+    global next_pid
     with lock:
-        if id_ in procesos:
-            return False, "Proceso ya existe."
-        procesos[id_] = {
+        pid = str(next_pid)
+        
+        procesos[pid] = {
             "nombre": nombre,
             "prioridad": prioridad,
             "estado": "activo"
         }
-        return True, f"Proceso {id_} creado."
+        next_pid += 1
+        return True, f"Proceso {pid} creado."
 
 """ 
     Lista todos los procesos existentes.
@@ -44,21 +47,21 @@ def listar_procesos():
 
 """
     Elimina un proceso existente.
-    id_: ID del proceso a eliminar.
+    pid: ID del proceso a eliminar.
     Retorna una tupla (exito, mensaje).
     Si el proceso no existe, retorna False y un mensaje de Proceso no encontrado.
     Si el proceso se elimina correctamente, retorna True y un mensaje de Proceso eliminado.
 """
-def eliminar_proceso(id_):
+def eliminar_proceso(pid):
     with lock:
-        if id_ in procesos:
-            del procesos[id_]
-            return True, f"Proceso {id_} eliminado."
+        if pid in procesos:
+            del procesos[pid]
+            return True, f"Proceso {pid} eliminado."
         return False, "Proceso no encontrado."
 
 """
     Modifica un campo de un proceso existente.
-    id_: ID del proceso a modificar.
+    pid: ID del proceso a modificar.
     campo: Campo a modificar (nombre, prioridad, estado).
     valor: Nuevo valor para el campo.
     Retorna una tupla (exito, mensaje).
@@ -67,14 +70,14 @@ def eliminar_proceso(id_):
     Si el proceso se modifica correctamente,
     retorna True y un mensaje de Proceso actualizado.
 """
-def modificar_proceso(id_, campo, valor):
+def modificar_proceso(pid, campo, valor):
     with lock:
-        if id_ not in procesos:
+        if pid not in procesos:
             return False, "Proceso no encontrado."
-        if campo not in procesos[id_]:
+        if campo not in procesos[pid]:
             return False, "Campo inválido."
-        procesos[id_][campo] = valor
-        return True, f"Proceso {id_} actualizado."
+        procesos[pid][campo] = valor
+        return True, f"Proceso {pid} actualizado."
 
 """
     Utilidad para limpiar todos los procesos. Útil en tests.
