@@ -84,3 +84,5 @@ def modificar_proceso(pid, campo, valor):
 """
 def reiniciar_procesos():
     procesos.clear()
+    global next_pid
+    next_pid = 1
