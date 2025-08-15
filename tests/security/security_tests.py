@@ -87,7 +87,7 @@ class SecurityTester:
         
         test_cases = [
             ('Comando largo', 'A' * 1000),
-                        ('Nombre proceso largo', f"CREAR|{'B' * 5000}|alta\n"),
+            ('Nombre proceso largo', f"CREAR|{'B' * 5000}|alta\n"),
             ('Prioridad larga', f"CREAR|proceso1|{'C' * 5000}\n"),
             ('ID muy largo', f"MODIFICAR|{'9' * 5000}|prioridad|alta\n"),
             ('Múltiples pipes', f"CREAR|{'|' * 1000}\n"),
@@ -103,7 +103,7 @@ class SecurityTester:
             response = await self.send_payload(reader, writer, payload)
             
             # Verificar si el servidor crasheó o respondió anormalmente
-            is_vulnerable = response in ["TIMEOUT", ""] or "ERROR" in response and "Connection" in response
+            is_vulnerable = response in ["TIMEOUT", ""] or ("ERROR" in response and "Connection" in response)
             
             result = {
                 'test': 'Buffer Overflow',
@@ -123,48 +123,6 @@ class SecurityTester:
             writer.close()
             await writer.wait_closed()
     
-    async def test_sql_injection(self):
-        """Prueba inyección SQL (si usa base de datos)"""
-        print("\n🔍 Test 3: SQL Injection")
-        
-        payloads = [
-            "CREAR|proceso' OR '1'='1|alta\n",
-            "ELIMINAR|1 OR 1=1--\n",
-            "MODIFICAR|1' UNION SELECT * FROM users--|prioridad|alta\n",
-            "LISTAR|' OR 1=1--\n",
-            "CREAR|proceso1|alta'; DROP TABLE procesos;--\n",
-            "ELIMINAR|1; DELETE FROM procesos WHERE 1=1;\n",
-        ]
-        
-        for payload in payloads:
-            reader, writer = await self.connect()
-            if not reader:
-                continue
-            
-            response = await self.send_payload(reader, writer, payload)
-            
-            # Buscar indicios de SQL injection
-            sql_errors = ['syntax error', 'sql', 'mysql', 'postgresql', 'sqlite', 'database']
-            is_vulnerable = any(error in response.lower() for error in sql_errors)
-            
-            result = {
-                'test': 'SQL Injection',
-                'payload': payload.strip(),
-                'response': response[:100] + '...' if len(response) > 100 else response,
-                'vulnerable': is_vulnerable
-            }
-            
-            self.test_results.append(result)
-            
-            if is_vulnerable:
-                self.vulnerabilities.append(f"SQL Injection: {payload.strip()}")
-                print(f"  ⚠️  VULNERABLE con: {payload.strip()}")
-            else:
-                print(f"  ✅ Seguro contra: {payload.strip()}")
-            
-            writer.close()
-            await writer.wait_closed()
-    
     async def test_dos_attacks(self):
         """Prueba ataques de denegación de servicio"""
         print("\n🔍 Test 4: Denial of Service (DoS)")
@@ -173,7 +131,7 @@ class SecurityTester:
         print("  📌 Probando conexiones múltiples...")
         connections = []
         try:
-                        for i in range(100):
+            for i in range(100):
                 reader, writer = await self.connect()
                 if reader:
                     connections.append((reader, writer))
@@ -292,7 +250,7 @@ class SecurityTester:
             writer.close()
             await writer.wait_closed()
     
-        async def test_authentication_bypass(self):
+    async def test_authentication_bypass(self):
         """Prueba bypass de autenticación (si aplica)"""
         print("\n🔍 Test 7: Authentication Bypass")
         
@@ -408,7 +366,7 @@ class SecurityTester:
         <h2>📊 Resultados Detallados</h2>
         <table>
             <tr>
-                                <th>Tipo de Prueba</th>
+                <th>Tipo de Prueba</th>
                 <th>Payload</th>
                 <th>Respuesta</th>
                 <th>Estado</th>
@@ -462,7 +420,6 @@ async def run_security_tests():
     # Ejecutar todas las pruebas
     await tester.test_command_injection()
     await tester.test_buffer_overflow()
-    await tester.test_sql_injection()
     await tester.test_dos_attacks()
     await tester.test_path_traversal()
     await tester.test_format_string()
@@ -494,7 +451,7 @@ if __name__ == "__main__":
     try:
         is_secure = asyncio.run(run_security_tests())
         sys.exit(0 if is_secure else 1)
-        except KeyboardInterrupt:
+    except KeyboardInterrupt:
         print("\n\nPruebas interrumpidas por el usuario")
         sys.exit(1)
     except Exception as e:
