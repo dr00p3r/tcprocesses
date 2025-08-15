@@ -1,4 +1,6 @@
 # security_tests.py
+# Description: Pruebas de seguridad del servidor TCP de procesos (inyección, overflow, DoS, traversal, format string, auth bypass).
+
 import asyncio
 import sys
 import random
@@ -9,24 +11,39 @@ from datetime import datetime
 HOST = "localhost"
 PORT = 12345
 
+"""
+    Clase ejecutora de pruebas de seguridad contra el servidor TCP.
+    Mantiene lista de vulnerabilidades y resultados detallados de cada prueba.
+"""
 class SecurityTester:
+    """
+        Inicializa contenedores de resultados y vulnerabilidades.
+    """
     def __init__(self):
         self.vulnerabilities = []
         self.test_results = []
         
+    """
+        Establece conexión con el servidor y consume el mensaje de bienvenida.
+        Retorna: (reader, writer) o (None, None) ante error.
+    """
     async def connect(self):
-        """Establece conexión con el servidor"""
         try:
             reader, writer = await asyncio.open_connection(HOST, PORT)
             # Leer mensaje de bienvenida
             await reader.readline()
             return reader, writer
         except Exception as e:
-            print(f"❌ Error conectando: {e}")
+            print(f"ERROR conectando: {e}")
             return None, None
     
+    """
+        Envía un payload y retorna la primera línea de respuesta (o TIMEOUT/ERROR).
+        reader: StreamReader activo.
+        writer: StreamWriter activo.
+        payload: Cadena a enviar (debe incluir '\n' si aplica).
+    """
     async def send_payload(self, reader, writer, payload):
-        """Envía un payload y recibe respuesta"""
         try:
             writer.write(payload.encode('utf-8'))
             await writer.drain()
@@ -37,9 +54,12 @@ class SecurityTester:
         except Exception as e:
             return f"ERROR: {str(e)}"
     
+    """
+        Prueba de inyección de comandos.
+        Marca vulnerable si la respuesta contiene indicios de ejecución de comandos del sistema.
+    """
     async def test_command_injection(self):
-        """Prueba inyección de comandos"""
-        print("\n🔍 Test 1: Inyección de Comandos")
+        print("\nTest 1: Inyección de Comandos")
         
         payloads = [
             "CREAR|proceso1|alta;ls -la\n",
@@ -74,16 +94,19 @@ class SecurityTester:
             
             if is_vulnerable:
                 self.vulnerabilities.append(f"Command Injection: {payload.strip()}")
-                print(f"  ⚠️  VULNERABLE con: {payload.strip()}")
+                print(f"  VULNERABLE con: {payload.strip()}")
             else:
-                print(f"  ✅ Seguro contra: {payload.strip()}")
+                print(f"  Seguro contra: {payload.strip()}")
             
             writer.close()
             await writer.wait_closed()
     
+    """
+        Prueba de desbordamiento de buffer.
+        Marca vulnerable por TIMEOUT, respuesta vacía o errores de conexión.
+    """
     async def test_buffer_overflow(self):
-        """Prueba desbordamiento de buffer"""
-        print("\n🔍 Test 2: Buffer Overflow")
+        print("\nTest 2: Buffer Overflow")
         
         test_cases = [
             ('Comando largo', 'A' * 1000),
@@ -116,19 +139,22 @@ class SecurityTester:
             
             if is_vulnerable:
                 self.vulnerabilities.append(f"Buffer Overflow: {test_name}")
-                print(f"  ⚠️  VULNERABLE: {test_name}")
+                print(f"  VULNERABLE: {test_name}")
             else:
-                print(f"  ✅ Seguro: {test_name}")
+                print(f"  Seguro: {test_name}")
             
             writer.close()
             await writer.wait_closed()
     
+    """
+        Prueba de ataques de denegación de servicio (DoS).
+        Incluye: agotamiento de conexiones y flood de comandos.
+    """
     async def test_dos_attacks(self):
-        """Prueba ataques de denegación de servicio"""
-        print("\n🔍 Test 4: Denial of Service (DoS)")
+        print("\nTest 4: Denial of Service (DoS)")
         
         # Test 1: Conexiones múltiples sin cerrar
-        print("  📌 Probando conexiones múltiples...")
+        print("  Probando conexiones múltiples...")
         connections = []
         try:
             for i in range(100):
@@ -142,9 +168,9 @@ class SecurityTester:
             
             if dos_vulnerable:
                 self.vulnerabilities.append("DoS: Agotamiento de conexiones")
-                print("  ⚠️  VULNERABLE: Límite de conexiones alcanzado")
+                print("  VULNERABLE: Límite de conexiones alcanzado")
             else:
-                print("  ✅ Seguro: Maneja múltiples conexiones")
+                print("  Seguro: Maneja múltiples conexiones")
                 test_writer.close()
             
             # Cerrar todas las conexiones
@@ -153,10 +179,10 @@ class SecurityTester:
                 await writer.wait_closed()
                 
         except Exception as e:
-            print(f"  ❌ Error en prueba DoS: {e}")
+            print(f"  Error en prueba DoS: {e}")
         
         # Test 2: Comandos rápidos
-        print("  📌 Probando flood de comandos...")
+        print("  Probando flood de comandos...")
         reader, writer = await self.connect()
         if reader:
             start_time = asyncio.get_event_loop().time()
@@ -164,13 +190,16 @@ class SecurityTester:
                 await self.send_payload(reader, writer, f"CREAR|flood_{i}|alta\n")
             
             duration = asyncio.get_event_loop().time() - start_time
-            print(f"  ℹ️  1000 comandos en {duration:.2f}s")
+            print(f"  1000 comandos en {duration:.2f}s")
             writer.close()
             await writer.wait_closed()
     
+    """
+        Prueba de path traversal.
+        Marca vulnerable si la respuesta aparenta exposición de archivos sensibles.
+    """
     async def test_path_traversal(self):
-        """Prueba path traversal"""
-        print("\n🔍 Test 5: Path Traversal")
+        print("\nTest 5: Path Traversal")
         
         payloads = [
             "CREAR|../../../etc/passwd|alta\n",
@@ -202,16 +231,19 @@ class SecurityTester:
             
             if is_vulnerable:
                 self.vulnerabilities.append(f"Path Traversal: {payload.strip()}")
-                print(f"  ⚠️  VULNERABLE con: {payload.strip()}")
+                print(f"  VULNERABLE con: {payload.strip()}")
             else:
-                print(f"  ✅ Seguro contra: {payload.strip()}")
+                print(f"  Seguro contra: {payload.strip()}")
             
             writer.close()
             await writer.wait_closed()
     
+    """
+        Prueba de vulnerabilidades de cadenas de formato (format string).
+        Busca indicadores típicos en la respuesta.
+    """
     async def test_format_string(self):
-        """Prueba format string vulnerabilities"""
-        print("\n🔍 Test 6: Format String")
+        print("\nTest 6: Format String")
         
         payloads = [
             "CREAR|%s%s%s%s%s|alta\n",
@@ -243,16 +275,19 @@ class SecurityTester:
             
             if is_vulnerable:
                 self.vulnerabilities.append(f"Format String: {payload.strip()}")
-                print(f"  ⚠️  VULNERABLE con: {payload.strip()}")
+                print(f"  VULNERABLE con: {payload.strip()}")
             else:
-                print(f"  ✅ Seguro contra: {payload.strip()}")
+                print(f"  Seguro contra: {payload.strip()}")
             
             writer.close()
             await writer.wait_closed()
     
+    """
+        Prueba de bypass de autenticación (si aplica).
+        Marca vulnerable si comandos privilegiados se aceptan con 'OK'.
+    """
     async def test_authentication_bypass(self):
-        """Prueba bypass de autenticación (si aplica)"""
-        print("\n🔍 Test 7: Authentication Bypass")
+        print("\nTest 7: Authentication Bypass")
         
         payloads = [
             "ADMIN|LISTAR\n",
@@ -276,7 +311,7 @@ class SecurityTester:
             result = {
                 'test': 'Authentication Bypass',
                 'payload': payload.strip(),
-                'response': response[:100] + '...' if len(response) > 100 else response,
+                'response": response[:100] + "..." if len(response) > 100 else response,
                 'vulnerable': is_vulnerable
             }
             
@@ -284,15 +319,18 @@ class SecurityTester:
             
             if is_vulnerable:
                 self.vulnerabilities.append(f"Auth Bypass: {payload.strip()}")
-                print(f"  ⚠️  VULNERABLE con: {payload.strip()}")
+                print(f"  VULNERABLE con: {payload.strip()}")
             else:
-                print(f"  ✅ Seguro contra: {payload.strip()}")
+                print(f"  Seguro contra: {payload.strip()}")
             
             writer.close()
             await writer.wait_closed()
     
+    """
+        Genera y guarda reportes JSON y HTML del resultado de las pruebas.
+        Retorna: (ruta_html, ruta_json).
+    """
     def generate_report(self):
-        """Genera reporte de seguridad"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         report = {
@@ -330,7 +368,7 @@ class SecurityTester:
 </head>
 <body>
     <div class="header">
-        <h1>🔒 Reporte de Seguridad - Servidor TCP</h1>
+        <h1>Reporte de Seguridad - Servidor TCP</h1>
         <p>Fecha: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
         <p>Objetivo: {HOST}:{PORT}</p>
     </div>
@@ -354,7 +392,7 @@ class SecurityTester:
         if self.vulnerabilities:
             html_content += """
     <div class="test-section">
-        <h2>⚠️ Vulnerabilidades Encontradas</h2>
+        <h2>Vulnerabilidades Encontradas</h2>
 """
             for vuln in self.vulnerabilities:
                 html_content += f'        <div class="vulnerable">{vuln}</div>\n'
@@ -363,7 +401,7 @@ class SecurityTester:
         # Tabla de resultados detallados
         html_content += """
     <div class="test-section">
-        <h2>📊 Resultados Detallados</h2>
+        <h2>Resultados Detallados</h2>
         <table>
             <tr>
                 <th>Tipo de Prueba</th>
@@ -387,17 +425,7 @@ class SecurityTester:
         html_content += """
         </table>
     </div>
-    
-    <div class="test-section">
-        <h2>📋 Recomendaciones</h2>
-        <ul>
-            <li>Validar y sanitizar todas las entradas del usuario</li>
-            <li>Implementar límites de longitud para comandos y parámetros</li>
-            <li>Usar listas blancas para caracteres permitidos</li>
-            <li>Implementar rate limiting para prevenir DoS</li>
-            <li>Registrar y monitorear intentos de ataque</li>
-        </ul>
-    </div>
+
 </body>
 </html>
 """
@@ -407,8 +435,11 @@ class SecurityTester:
         
         return f'security_report_{timestamp}.html', f'security_report_{timestamp}.json'
 
+"""
+    Ejecuta todas las pruebas de seguridad y genera reportes.
+    Retorna True si no se detectaron vulnerabilidades.
+"""
 async def run_security_tests():
-    """Ejecuta todas las pruebas de seguridad"""
     print("="*60)
     print("🔒 INICIANDO PRUEBAS DE SEGURIDAD")
     print("="*60)
@@ -427,26 +458,29 @@ async def run_security_tests():
     
     # Generar reporte
     print("\n" + "="*60)
-    print("📊 RESUMEN DE RESULTADOS")
+    print("RESUMEN DE RESULTADOS")
     print("="*60)
     
     print(f"Total de pruebas: {len(tester.test_results)}")
     print(f"Vulnerabilidades encontradas: {len(tester.vulnerabilities)}")
     
     if tester.vulnerabilities:
-        print("\n⚠️  VULNERABILIDADES DETECTADAS:")
+        print("\nVULNERABILIDADES DETECTADAS:")
         for vuln in tester.vulnerabilities:
             print(f"   - {vuln}")
     else:
-        print("\n✅ No se encontraron vulnerabilidades")
+        print("\nNo se encontraron vulnerabilidades")
     
     html_file, json_file = tester.generate_report()
-    print(f"\n📄 Reportes generados:")
+    print(f"\nReportes generados:")
     print(f"   - HTML: {html_file}")
     print(f"   - JSON: {json_file}")
     
     return len(tester.vulnerabilities) == 0
 
+"""
+    Punto de entrada del script de pruebas de seguridad.
+"""
 if __name__ == "__main__":
     try:
         is_secure = asyncio.run(run_security_tests())
@@ -455,5 +489,5 @@ if __name__ == "__main__":
         print("\n\nPruebas interrumpidas por el usuario")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Error durante las pruebas: {e}")
+        print(f"\nError durante las pruebas: {e}")
         sys.exit(1)

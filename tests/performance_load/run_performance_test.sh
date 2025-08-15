@@ -5,9 +5,9 @@ USERS=${1:-20}
 SPAWN_RATE=${2:-5}
 DURATION=${3:-30s}
 
-echo "🚀 Ejecutando prueba con $USERS usuarios"
-echo "   Spawn rate: $SPAWN_RATE usuarios/segundo"
-echo "   Duración: $DURATION"
+echo "Ejecutando prueba con $USERS usuarios."
+echo "  Spawn rate: $SPAWN_RATE usuarios/segundo"
+echo "  Duración: $DURATION"
 
 locust -f locustfile.py \
     --headless \
@@ -26,7 +26,7 @@ import os
 
 # Verificar si existe el archivo
 if not os.path.exists('results_stats.csv'):
-    print("❌ Error: No se generó el archivo de resultados")
+    print("ERROR: No se generó el archivo de resultados")
     sys.exit(1)
 
 # Leer estadísticas de Locust
@@ -51,7 +51,7 @@ if aggregated:
     p95 = float(aggregated['95%'])
     success_rate = 1 - (int(aggregated['Failure Count']) / int(aggregated['Request Count'])) if int(aggregated['Request Count']) > 0 else 0
 else:
-    print("❌ Error: No se encontraron datos agregados")
+    print("ERROR: No se encontraron datos agregados")
     sys.exit(1)
 
 print(f"\n=== RESULTADOS ===")
@@ -65,21 +65,21 @@ p95_ok = p95 < 700
 success_ok = success_rate >= 0.95
 
 print(f"\n=== VERIFICACIÓN DE OBJETIVOS ===")
-print(f"P95 < 700ms: {'✅ PASS' if p95_ok else '❌ FAIL'} ({p95:.2f}ms)")
-print(f"Tasa éxito >= 95%: {'✅ PASS' if success_ok else '❌ FAIL'} ({success_rate*100:.2f}%)")
+print(f"P95 < 700ms: {'PASÓ' if p95_ok else 'FALLÓ'} ({p95:.2f}ms)")
+print(f"Tasa éxito >= 95%: {'PASÓ' if success_ok else 'FALLÓ'} ({success_rate*100:.2f}%)")
 
 if p95_ok and success_ok:
-    print("\n🎉 PRUEBA EXITOSA: Todos los objetivos cumplidos")
+    print("\nPRUEBA EXITOSA: Todos los objetivos cumplidos")
     sys.exit(0)
 else:
-    print("\n❌ PRUEBA FALLIDA: No se cumplieron todos los objetivos")
+    print("\nPRUEBA FALLIDA: No se cumplieron todos los objetivos")
     sys.exit(1)
 EOF
 
 # Capturar el código de salida
 exit_code=$?
 
-echo -e "\n📊 Reporte HTML generado: report.html"
-echo "📈 Datos CSV generados: results_*.csv"
+echo -e "\nReporte HTML generado: report.html"
+echo "Datos CSV generados: results_*.csv"
 
 exit $exit_code
