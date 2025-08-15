@@ -311,7 +311,7 @@ class SecurityTester:
             result = {
                 'test': 'Authentication Bypass',
                 'payload': payload.strip(),
-                'response": response[:100] + "..." if len(response) > 100 else response,
+                'response': response[:100] + '...' if len(response) > 100 else response,
                 'vulnerable': is_vulnerable
             }
             
