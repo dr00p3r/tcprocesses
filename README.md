@@ -13,14 +13,17 @@
 ### SYSTEM TESTING
 
 > cd tests/system_testing
+
 > python3 system_test.py
 
 ### PERFORMANCE TESTING
 
 > cd tests/performance_load
+
 > ./run_performance_test.sh
 
 ### SECURITY TESTING
 
 > cd tests/security
+
 > ./run_security_tests.sh 
