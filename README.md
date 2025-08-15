@@ -26,4 +26,6 @@
 
 > cd tests/security
 
+> chmod +x run_security_tests.sh
+
 > ./run_security_tests.sh 
