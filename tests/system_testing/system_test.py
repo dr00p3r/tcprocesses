@@ -1,14 +1,20 @@
 # system_tests.py
+# Description: Pruebas de sistema del servidor de procesos (cliente asíncrono con asyncio).
+
 import asyncio
 import sys
 
 HOST = "localhost"
 PORT = 12345
 
-async def send_command(reader, writer, command):
-    """
+"""
     Función auxiliar para enviar un comando y recibir la respuesta del servidor.
-    """
+    reader: StreamReader conectado al servidor.
+    writer: StreamWriter conectado al servidor.
+    command: Cadena con el comando a enviar (debe terminar en '\n' si el protocolo lo requiere).
+    Retorna: Respuesta completa del servidor como string (posiblemente multilínea).
+"""
+async def send_command(reader, writer, command):
     print(f"\n-> Enviando comando: {command.strip()}")
     writer.write(command.encode('utf-8'))
     await writer.drain()
@@ -33,10 +39,11 @@ async def send_command(reader, writer, command):
     print(f"<- Recibido del servidor:\n{response}")
     return response
 
-async def run_tests():
-    """
+"""
     Función principal que ejecuta todos los escenarios de prueba.
-    """
+    Establece la conexión, verifica respuestas del servidor y valida casos de éxito y error.
+"""
+async def run_tests():
     try:
         reader, writer = await asyncio.open_connection(HOST, PORT)
         print(f"✅ Conectado al servidor en {HOST}:{PORT}")
@@ -97,12 +104,15 @@ async def run_tests():
         print("✅ Conexión cerrada correctamente.")
 
     except ConnectionRefusedError:
-        print("❌ Error: Conexión rechazada. Asegúrate de que el servidor está escuchando.")
+        print("Error: Conexión rechazada. Asegúrate de que el servidor está escuchando.")
         sys.exit(1)
     except Exception as e:
-        print(f"❌ Ocurrió un error inesperado durante las pruebas: {e}")
+        print(f"Ocurrió un error inesperado durante las pruebas: {e}")
         sys.exit(1)
 
+"""
+    Punto de entrada del script de pruebas del sistema.
+"""
 if __name__ == "__main__":
     print("Iniciando pruebas del sistema...")
     asyncio.run(run_tests())
